@@ -32,7 +32,7 @@ DATASET:
   ROOT_JOINT_ID: 2
 
 NETWORK:
-  PRETRAINED_BACKBONE: "backbone/pose_resnet50_panoptic.pth.tar"
+  PRETRAINED_BACKBONE: "models/pose_resnet50_panoptic.pth.tar"
   NUM_CHANNEL_JOINT_FEAT: 32
   NUM_CHANNEL_JOINT_HIDDEN: 64
   SIGMA: 3
@@ -54,8 +54,8 @@ TRAIN:
   VIS_TYPE: ['2d_planes', 'image_with_poses', 'heatmaps']
 
 TEST:
-  MODEL_FILE: 'model_best.pth.tar'
-  BATCH_SIZE: 8
+  MODEL_FILE: 'models/model_best.pth.tar'
+  BATCH_SIZE: 1
   VISUALIZATION: false
   VIS_TYPE: ['2d_planes', 'image_with_poses', 'heatmaps']
 
