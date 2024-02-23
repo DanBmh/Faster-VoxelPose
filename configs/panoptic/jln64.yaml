@@ -16,7 +16,7 @@ DATASET:
   COLOR_RGB: True
   TRAIN_DATASET: 'panoptic'
   TRAIN_HEATMAP_SRC: 'image'
-  TEST_DATASET: 'panoptic'
+  TEST_DATASET: 'skelda'
   TEST_HEATMAP_SRC: 'image'
   CAMERA_NUM: 5
   ORI_IMAGE_SIZE: 
@@ -54,7 +54,7 @@ TRAIN:
   VIS_TYPE: ['2d_planes', 'image_with_poses', 'heatmaps']
 
 TEST:
-  MODEL_FILE: 'models/model_best.pth.tar'
+  MODEL_FILE: '/Faster-VoxelPose/models/panoptic/model_best.pth.tar'
   BATCH_SIZE: 1
   VISUALIZATION: false
   VIS_TYPE: ['2d_planes', 'image_with_poses', 'heatmaps']
