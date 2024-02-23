@@ -14,6 +14,7 @@ import pickle
 import logging
 import random
 import json_tricks as json
+import tqdm
 
 from utils.transforms import rotate_points
 from utils.cameras import project_pose_cpu
@@ -83,7 +84,8 @@ class Synthetic(JointsDataset):
         return our_cameras
 
     def _get_db(self):
-        for _ in range(self.num_of_data):
+        print("Generating synthetic views ...")
+        for _ in tqdm.tqdm(range(self.num_of_data)):
             bbox_list = []
             center_list = []
             nposes = np.random.choice(range(self.max_synthetic_people)) + 1

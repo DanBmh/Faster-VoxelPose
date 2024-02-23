@@ -35,7 +35,7 @@ def train(config, backbone, model, optimizer, loader, epoch, output_dir, writer_
     resize_transform = torch.as_tensor(loader.dataset.resize_transform, dtype=torch.float, device=config.DEVICE)
 
     for i, (inputs, targets, meta, input_heatmaps) in enumerate(loader):
-        if config.DATASET.TEST_HEATMAP_SRC == 'image':
+        if config.DATASET.TRAIN_HEATMAP_SRC == 'image':
             inputs = inputs.to(config.DEVICE)
             targets = dict((k, v.to(config.DEVICE)) for k, v in targets.items())
             fused_poses, plane_poses, proposal_centers, input_heatmaps, loss_dict = model(backbone=backbone, views=inputs, 

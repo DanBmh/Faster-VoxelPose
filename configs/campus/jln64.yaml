@@ -63,8 +63,8 @@ TRAIN:
   VIS_TYPE: ['2d_planes']
 
 TEST:
-  MODEL_FILE: 'model_best.pth.tar'
-  BATCH_SIZE: 16
+  MODEL_FILE: '/Faster-VoxelPose/models/campus/model_best.pth.tar'
+  BATCH_SIZE: 1
   VISUALIZATION: false
   VIS_TYPE: ['2d_planes', 'image_with_poses']
 

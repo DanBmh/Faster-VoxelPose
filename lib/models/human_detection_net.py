@@ -28,7 +28,10 @@ class ProposalLayer(nn.Module):
         
         for i in range(batch_size):
             proposals = topk_index[i].reshape(self.max_people, 1, -1)
-            gt = gt_3d[i, :num_person[i]].reshape(1, num_person[i], -1)
+            if num_person[i] == 0:
+                gt = torch.zeros_like(proposals)
+            else:
+                gt = gt_3d[i, :num_person[i]].reshape(1, num_person[i], -1)
             dist = torch.sqrt(torch.sum((proposals - gt)**2, dim=-1))
             min_dist, min_gt = torch.min(dist, dim=-1)
             proposal2gt[i] = min_gt
