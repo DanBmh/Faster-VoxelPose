@@ -1,0 +1,94 @@
+CUDNN:
+  BENCHMARK: true
+  DETERMINISTIC: false
+  ENABLED: true
+
+BACKBONE: 'resnet'
+MODEL: 'faster_voxelpose'
+DEVICE: 'cuda:0'
+OUTPUT_DIR: 'output'
+LOG_DIR: 'log'
+WORKERS: 8
+PRINT_FREQ: 100
+
+DATASET:
+  DATADIR: "data/human36m"
+  COLOR_RGB: True
+  TRAIN_DATASET: 'synthetic'
+  TRAIN_HEATMAP_SRC: 'gt'
+  TEST_DATASET: 'skelda'
+  TEST_HEATMAP_SRC: 'image'
+  CAMERA_NUM: 4
+  ORI_IMAGE_SIZE: 
+    - 1000
+    - 1000
+  IMAGE_SIZE: 
+    - 512
+    - 512
+  HEATMAP_SIZE: 
+    - 128
+    - 128
+  NUM_JOINTS: 15
+  ROOT_JOINT_ID: 2
+
+SYNTHETIC:
+  CAMERA_FILE: '/FasterVoxelPoseWrapper/data/calibration_human36m.json'
+  POSE_FILE: '/Faster-VoxelPose/data/panoptic_training_pose.pkl'
+  MAX_PEOPLE: 5
+  NUM_DATA: 10000
+  DATA_AUGMENTATION: true
+
+NETWORK:
+  PRETRAINED_BACKBONE: "models/pose_resnet50_panoptic.pth.tar"
+  NUM_CHANNEL_JOINT_FEAT: 32
+  NUM_CHANNEL_JOINT_HIDDEN: 64
+  SIGMA: 4
+  BETA: 100
+
+TRAIN:
+  BATCH_SIZE: 8
+  SHUFFLE: true
+  BEGIN_EPOCH: 0
+  END_EPOCH: 50
+  RESUME: false
+  OPTIMIZER: adam
+  LR: 0.0001
+  LAMBDA_LOSS_2D: 1.0
+  LAMBDA_LOSS_1D: 1.0
+  LAMBDA_LOSS_BBOX: 0.1
+  LAMBDA_LOSS_FUSED: 5.0
+  VISUALIZATION: false
+  VIS_TYPE: ['2d_planes']
+
+TEST:
+  MODEL_FILE: '/Faster-VoxelPose/output/skelda/jln64_human36m/model_best.pth.tar'
+  # MODEL_FILE: '/Faster-VoxelPose/models/panoptic/model_best.pth.tar'
+  BATCH_SIZE: 1
+  VISUALIZATION: false
+  VIS_TYPE: ['2d_planes', 'image_with_poses']
+
+CAPTURE_SPEC:
+  SPACE_SIZE:
+    - 4800.0
+    - 6000.0
+    - 2000.0
+  SPACE_CENTER:
+    - 0.0
+    - 0.0
+    - 1000.0
+  VOXELS_PER_AXIS:
+    - 80
+    - 80
+    - 20
+  MAX_PEOPLE: 5
+  MIN_SCORE: 0.1
+  
+INDIVIDUAL_SPEC:
+  SPACE_SIZE:
+    - 2000.0
+    - 2000.0
+    - 2000.0
+  VOXELS_PER_AXIS:
+    - 64
+    - 64
+    - 64

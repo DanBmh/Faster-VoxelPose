@@ -17,6 +17,24 @@ from utils.cameras import project_pose_cpu
 
 logger = logging.getLogger(__name__)
 
+# ==================================================================================================
+
+
+def resize_image(img, image_size):
+    height, width, _ = img.shape
+    c = np.array([width / 2.0, height / 2.0])
+    s = get_scale((width, height), image_size)
+    r = 0
+
+    trans = get_affine_transform(c, s, r, image_size)
+    inp = cv2.warpAffine(
+        img, trans, (int(image_size[0]), int(image_size[1])), flags=cv2.INTER_LINEAR
+    )
+
+    return inp, c, s
+
+# ==================================================================================================
+
 class JointsDataset(Dataset):
     def __init__(self, cfg, is_train=True, transform=None):
         self.cfg = cfg
@@ -127,8 +145,12 @@ class JointsDataset(Dataset):
             all_input = []
             for image_path in all_image_path:
                 input = cv2.imread(image_path, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
+                if input.shape == (1002, 1000, 3):
+                    # Fix the different shapes of human36m images
+                    input = cv2.resize(input, (1000, 1000))
                 if self.color_rgb:
                     input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
+                input, _, _ = resize_image(input, self.image_size)
                 if self.transform:
                     input = self.transform(input)
                 all_input.append(input)

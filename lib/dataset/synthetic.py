@@ -93,6 +93,60 @@ class Synthetic(JointsDataset):
             joints_3d = np.array([p['pose'] for p in select_poses])
             joints_3d_vis = np.array([p['vis'][:, -1] for p in select_poses])
 
+            if len(joints_3d[0]) != self.num_joints and self.num_joints == 15:
+                # Using the pretrained backbone which has a different output
+                num_poses = len(joints_3d)
+                num_joints = self.num_joints
+                updated_joints_3d = np.zeros((num_poses, num_joints, 3))
+                updated_joints_3d_vis = np.zeros((num_poses, num_joints))
+
+                for i in range(num_poses):
+                    # Calculating middle points
+                    shoulder_middle = (joints_3d[i, 5, :] + joints_3d[i, 6, :]) / 2 
+                    hip_middle = (joints_3d[i, 11, :] + joints_3d[i, 12, :]) / 2  
+                    updated_joints_3d[i, 0, :] = shoulder_middle
+                    updated_joints_3d[i, 2, :] = hip_middle
+
+                    # Visibility for the middle points
+                    shoulder_middle_vis = min(joints_3d_vis[i, 5], joints_3d_vis[i, 6])
+                    hip_middle_vis = min(joints_3d_vis[i, 11], joints_3d_vis[i, 12])
+                    updated_joints_3d[i, 0] = shoulder_middle_vis
+                    updated_joints_3d[i, 2] = hip_middle_vis
+
+                    # Updating the array based on the new order
+                    # joint_names_3d = [
+                    #     "shoulder_middle",
+                    #     "nose",
+                    #     "hip_middle",
+                    #     "shoulder_left",
+                    #     "elbow_left",
+                    #     "wrist_left",
+                    #     "hip_left",
+                    #     "knee_left",
+                    #     "ankle_left",
+                    #     "shoulder_right",
+                    #     "elbow_right",
+                    #     "wrist_right",
+                    #     "hip_right",
+                    #     "knee_right",
+                    #     "ankle_right",
+                    # ]
+                    # joint_names_coco = ['nose', 'eye_left', 'eye_right', 'ear_left', 'ear_right', 'shoulder_left', 'shoulder_right', 'elbow_left', 
+                    # 'elbow_right', 'wrist_left', 'wrist_right', 'hip_left', 'hip_right', 'knee_left', 'knee_right', 'ankle_left', 'ankle_right']
+                    joint_map = ((0, 1), (5, 3), (7, 4), (9, 5), (11, 6), (13, 7), (15, 8), (6, 9), (8, 10), (10, 11), (12, 12), (14, 13), (16, 14))
+                    for j, k in joint_map:
+                        updated_joints_3d[i, k, :] = joints_3d[i, j, :]
+                        updated_joints_3d_vis[i, k] = joints_3d_vis[i, j]
+                    
+                    # Inserting the calculated middle points
+                    updated_joints_3d[i, 0, :] = shoulder_middle
+                    updated_joints_3d[i, 2, :] = hip_middle
+                    updated_joints_3d_vis[i, 0] = shoulder_middle_vis
+                    updated_joints_3d_vis[i, 2] = hip_middle_vis
+
+                joints_3d = updated_joints_3d
+                joints_3d_vis = updated_joints_3d_vis
+
             for n in range(nposes):
                 assert len(joints_3d[n]) == self.num_joints, "inconsistent number of joints"
                 points = joints_3d[n][:, :2].copy()
