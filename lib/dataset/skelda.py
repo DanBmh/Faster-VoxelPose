@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
+
+import json
 import logging
 
-import tqdm
-import json
 import numpy as np
+import tqdm
 from dataset.JointsDataset import JointsDataset
 from skelda import evals, utils_pose
 
@@ -17,8 +18,6 @@ dataset_use = "panoptic"
 # dataset_use = "mvor"
 # dataset_use = "shelf"
 # dataset_use = "campus"
-# dataset_use = "ikeaasm"
-# dataset_use = "tsinghua"
 datasets = {
     "panoptic": {
         "path": "/datasets/panoptic/skelda/test.json",
@@ -34,10 +33,6 @@ datasets = {
         "path": "/datasets/mvor/skelda/all.json",
         "take_interval": 1,
     },
-    "ikeaasm": {
-        "path": "/datasets/ikeaasm/skelda/test.json",
-        "take_interval": 2,
-    },
     "campus": {
         "path": "/datasets/campus/skelda/test.json",
         "take_interval": 1,
@@ -45,10 +40,6 @@ datasets = {
     "shelf": {
         "path": "/datasets/shelf/skelda/test.json",
         "take_interval": 1,
-    },
-    "tsinghua": {
-        "path": "/datasets/tsinghua/skelda/test.json",
-        "take_interval": 3,
     },
 }
 
@@ -71,8 +62,6 @@ joint_names_3d = [
 ]
 
 eval_joints = [
-    "shoulder_middle",
-    "hip_middle",
     "nose",
     "shoulder_left",
     "shoulder_right",
@@ -140,7 +129,7 @@ def load_labels(dataset: dict):
             label["cameras_color"] = label["cameras"]
             label["imgpaths_color"] = label["imgpaths"]
 
-            # Use "nose" detection as "head" joint position
+            # Use "head" label for "nose" detections
             label["joints"][label["joints"].index("head")] = "nose"
 
             # Lift poses and cams up, that the bottom of the room is at zero level
@@ -163,12 +152,17 @@ def load_labels(dataset: dict):
         for label in labels:
             label["scene"] = "main"
 
+            # Use "head" label for "nose" detections
+            label["joints"][label["joints"].index("head")] = "nose"
+
     elif "campus" in dataset:
         labels = load_json(dataset["campus"]["path"])
         labels = [lb for lb in labels if "test" in lb["splits"]]
         for label in labels:
             label["scene"] = "main"
 
+            # Use "head" label for "nose" detections
+            label["joints"][label["joints"].index("head")] = "nose"
 
     elif "tsinghua" in dataset:
         labels = load_json(dataset["tsinghua"]["path"])
@@ -188,7 +182,7 @@ def load_labels(dataset: dict):
             labels = [l for i, l in enumerate(labels) if i % take_interval == 0]
 
     # Filter joints
-    fj_func = lambda x: utils_pose.filter_joints_3d(x, eval_joints)
+    fj_func = lambda x: utils_pose.filter_joints_3d(x, joint_names_3d)
     labels = list(map(fj_func, labels))
 
     return labels
@@ -200,7 +194,7 @@ def load_labels(dataset: dict):
 class Skelda(JointsDataset):
     def __init__(self, cfg, is_train=True, transform=None):
         super().__init__(cfg, is_train, transform)
-        
+
         self.num_joints = len(joint_names_3d)
         self.num_views = cfg.DATASET.CAMERA_NUM
         self.root_id = cfg.DATASET.ROOT_JOINT_ID
@@ -235,7 +229,6 @@ class Skelda(JointsDataset):
         db = []
 
         for label in tqdm.tqdm(self.labels):
-            
             all_poses_3d = []
             all_poses_vis_3d = []
 
@@ -259,7 +252,9 @@ class Skelda(JointsDataset):
 
         self.db = db
         super()._rebuild_db()
-        logger.info("=> {} images from {} views loaded".format(len(self.db), self.num_views))
+        logger.info(
+            "=> {} images from {} views loaded".format(len(self.db), self.num_views)
+        )
         return
 
     def _get_cam(self):
@@ -282,41 +277,12 @@ class Skelda(JointsDataset):
 
         return cameras
 
-
     def __getitem__(self, idx):
         input, target, meta, input_heatmap = super().__getitem__(idx)
         return input, target, meta, input_heatmap
 
     def __len__(self):
         return self.db_size
-
-    # ==============================================================================================
-
-    def add_extra_joints(self, poses3D):
-        # Add "hip_middle" joint
-        hip_left = poses3D[:, joint_names_3d.index("hip_left"), :]
-        hip_right = poses3D[:, joint_names_3d.index("hip_right"), :]
-        hip_middle = (hip_left[:, 0:3] + hip_right[:, 0:3]) / 2
-        hip_middle = np.concatenate(
-            (hip_middle, np.minimum(hip_left[:, 3], hip_right[:, 3])[:, np.newaxis]),
-            axis=-1,
-        )
-        poses3D = np.concatenate((poses3D, hip_middle[:, np.newaxis, :]), axis=-2)
-
-        # Add "shoulder_middle" joint
-        shoulder_left = poses3D[:, joint_names_3d.index("shoulder_left"), :]
-        shoulder_right = poses3D[:, joint_names_3d.index("shoulder_right"), :]
-        shoulder_middle = (shoulder_left[:, 0:3] + shoulder_right[:, 0:3]) / 2
-        shoulder_middle = np.concatenate(
-            (
-                shoulder_middle,
-                np.minimum(shoulder_left[:, 3], shoulder_right[:, 3])[:, np.newaxis],
-            ),
-            axis=-1,
-        )
-        poses3D = np.concatenate((poses3D, shoulder_middle[:, np.newaxis, :]), axis=-2)
-
-        return poses3D
 
     # ==============================================================================================
 
@@ -329,23 +295,14 @@ class Skelda(JointsDataset):
         filtered_poses = []
         scale = [1000.0, 1000.0, 1000.0, 1.0]
         for poses in all_poses:
-
             new_poses = []
             for pose in poses:
-                if pose[0, 3] >= 0:
+                if pose[self.root_id, 3] >= 0:
                     pose = np.array(pose)[:, [0, 1, 2, 4]] / scale
-
-                    if dataset_use in ["campus", "shelf"]:
-                        poses3D = np.array(pose)[np.newaxis, :, :]
-                        poses3D = self.add_extra_joints(poses3D)
-                        pose = poses3D[0]
 
                     new_poses.append(pose)
             filtered_poses.append(new_poses)
         all_poses = filtered_poses
-
-        if dataset_use in ["campus", "shelf"]:
-            joint_names_3d = joint_names_3d + ["hip_middle", "shoulder_middle"]
 
         res = evals.mpjpe.run_eval(
             self.labels,
@@ -362,10 +319,13 @@ class Skelda(JointsDataset):
             all_ids,
             joint_names_net=joint_names_3d,
             joint_names_use=eval_joints,
+            replace_head_with_nose=True,
         )
 
         if "mpjpe" in res:
-            metric = np.mean([v for k,v in res["mpjpe"].items() if k.startswith("ap-")])
+            metric = np.mean(
+                [v for k, v in res["mpjpe"].items() if k.startswith("ap-")]
+            )
         else:
             metric = 0
 

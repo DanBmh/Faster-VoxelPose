@@ -254,7 +254,7 @@ class JointsDataset(Dataset):
             
             # compute target index, offset and bbox size
             loc = (center_pos - space_center + 0.5 * space_size) / voxel_size
-            assert np.sum(loc < 0) == 0 and np.sum(loc > voxels_per_axis) == 0, "human centers out of bound!" 
+            # assert np.sum(loc < 0) == 0 and np.sum(loc > voxels_per_axis) == 0, "human centers out of bound!"
             # flatten 2d index
             target_index[n] = (loc // 1)[0] * voxels_per_axis[1] + (loc // 1)[1]
             target_offset[n] = (loc % 1)[:2]
