@@ -13,11 +13,13 @@ logger = logging.getLogger(__name__)
 
 # ==================================================================================================
 
-dataset_use = "panoptic"
-# dataset_use = "human36m"
+dataset_use = "human36m"
+# dataset_use = "panoptic"
 # dataset_use = "mvor"
 # dataset_use = "shelf"
 # dataset_use = "campus"
+# dataset_use = "ikeaasm"
+# dataset_use = "tsinghua"
 datasets = {
     "panoptic": {
         "path": "/datasets/panoptic/skelda/test.json",
@@ -40,6 +42,14 @@ datasets = {
     "shelf": {
         "path": "/datasets/shelf/skelda/test.json",
         "take_interval": 1,
+    },
+    "ikeaasm": {
+        "path": "/datasets/ikeaasm/skelda/test.json",
+        "take_interval": 2,
+    },
+    "tsinghua": {
+        "path": "/datasets/tsinghua/skelda/test.json",
+        "take_interval": 3,
     },
 }
 
@@ -135,16 +145,27 @@ def load_labels(dataset: dict):
             # Lift poses and cams up, that the bottom of the room is at zero level
             # Else the dataset pipeline fails
             bodies3D = np.array(label["bodies3D"])
-            bodies3D += [0, 1.0, 0, 0]
+            bodies3D += [0, 0, 1.0, 0]
             label["bodies3D"] = bodies3D.tolist()
             for cam in label["cameras"]:
                 T = np.array(cam["T"])
-                T[1][0] += 1.0
+                T[2][0] += 1.0
                 cam["T"] = T.tolist()
 
     elif "ikeaasm" in dataset:
         labels = load_json(dataset["ikeaasm"]["path"])
         labels = [lb for i, lb in enumerate(labels) if i % 300 < 72]
+
+        # Lift poses and cams up, that the bottom of the room is at zero level
+        # Else the dataset pipeline fails
+        for label in labels:
+            bodies3D = np.array(label["bodies3D"])
+            bodies3D += [0, 0, 1.2, 0]
+            label["bodies3D"] = bodies3D.tolist()
+            for cam in label["cameras"]:
+                T = np.array(cam["T"])
+                T[2][0] += 1.2
+                cam["T"] = T.tolist()
 
     elif "shelf" in dataset:
         labels = load_json(dataset["shelf"]["path"])
@@ -170,6 +191,7 @@ def load_labels(dataset: dict):
         labels = [lb for i, lb in enumerate(labels) if i % 800 < 90]
 
         for label in labels:
+            label["scene"] = label["seq"]
             label["bodyids"] = list(range(len(label["bodies3D"])))
 
     else:
