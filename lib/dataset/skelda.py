@@ -125,7 +125,8 @@ def load_labels(dataset: dict):
 
     elif "human36m" in dataset:
         labels = load_json(dataset["human36m"]["path"])
-        labels = [lb for i, lb in enumerate(labels) if i % 9000 < 150]
+        labels = [lb for lb in labels if lb["subject"] == "S9"]
+        labels = [lb for i, lb in enumerate(labels) if i % 4000 < 150]
 
         for label in labels:
             label.pop("action")
