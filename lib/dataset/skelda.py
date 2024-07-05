@@ -155,7 +155,8 @@ def load_labels(dataset: dict):
 
     elif "ikeaasm" in dataset:
         labels = load_json(dataset["ikeaasm"]["path"])
-        labels = [lb for i, lb in enumerate(labels) if i % 300 < 72]
+        cams0 = str(labels[0]["cameras"])
+        labels = [lb for lb in labels if str(lb["cameras"]) == cams0]
 
         # Lift poses and cams up, that the bottom of the room is at zero level
         # Else the dataset pipeline fails
@@ -189,7 +190,8 @@ def load_labels(dataset: dict):
     elif "tsinghua" in dataset:
         labels = load_json(dataset["tsinghua"]["path"])
         labels = [lb for lb in labels if "test" in lb["splits"]]
-        labels = [lb for i, lb in enumerate(labels) if i % 800 < 90]
+        labels = [lb for lb in labels if lb["seq"] == "seq_1"]
+        labels = [lb for i, lb in enumerate(labels) if i % 300 < 90]
 
         for label in labels:
             label["scene"] = label["seq"]
