@@ -185,12 +185,8 @@ class Shelf(JointsDataset):
     #         "knee_right",
     #         "ankle_left",
     #         "ankle_right",
-    #         "hip_middle",
-    #         "shoulder_middle",
     #     ]
     #     eval_joints = [
-    #         "shoulder_middle",
-    #         "hip_middle",
     #         "nose",
     #         "shoulder_left",
     #         "shoulder_right",
@@ -205,11 +201,9 @@ class Shelf(JointsDataset):
     #         "ankle_left",
     #         "ankle_right",
     #     ]
-
+    
     #     labels = load_json("/datasets/shelf/skelda/test.json")
     #     labels = [lb for lb in labels if "test" in lb["splits"]]
-    #     fj_func = lambda x: utils_pose.filter_joints_3d(x, eval_joints)
-    #     labels = list(map(fj_func, labels))
     #     print(labels[0])
 
     #     all_poses = []
@@ -220,26 +214,6 @@ class Shelf(JointsDataset):
     #         pred_coco = pred_coco[pred_coco[:, 0, 3] >= 0, :, :]
     #         pred_coco = pred_coco[:, :, [0,1,2,4]]
     #         poses3D = pred_coco / [1000.0, 1000.0, 1000.0, 1.0]
-
-    #         # Add "hip_middle" joint
-    #         hip_left = poses3D[:, joint_names_3d.index("hip_left"), :]
-    #         hip_right = poses3D[:, joint_names_3d.index("hip_right"), :]
-    #         hip_middle = (hip_left[:, 0:3] + hip_right[:, 0:3]) / 2
-    #         hip_middle = np.concatenate(
-    #             (hip_middle, np.minimum(hip_left[:, 3], hip_right[:, 3])[:, np.newaxis]),
-    #             axis=-1,
-    #         )
-    #         poses3D = np.concatenate((poses3D, hip_middle[:, np.newaxis, :]), axis=-2)
-
-    #         # Add "shoulder_middle" joint
-    #         shoulder_left = poses3D[:, joint_names_3d.index("shoulder_left"), :]
-    #         shoulder_right = poses3D[:, joint_names_3d.index("shoulder_right"), :]
-    #         shoulder_middle = (shoulder_left[:, 0:3] + shoulder_right[:, 0:3]) / 2
-    #         shoulder_middle = np.concatenate(
-    #             (shoulder_middle, np.minimum(shoulder_left[:, 3], shoulder_right[:, 3])[:, np.newaxis]),
-    #             axis=-1,
-    #         )
-    #         poses3D = np.concatenate((poses3D, shoulder_middle[:, np.newaxis, :]), axis=-2)
 
     #         all_poses.append(poses3D.tolist())
     #         all_ids.append("{:0>6}".format(fi))
@@ -257,6 +231,14 @@ class Shelf(JointsDataset):
     #         all_ids,
     #         joint_names_net=joint_names_3d,
     #         joint_names_use=eval_joints,
+    #     )
+
+    #     # Also run old evaluation for campus and shelf datasets
+    #     _ = evals.campus_shelf.run_eval(
+    #         labels,
+    #         all_poses,
+    #         all_ids,
+    #         joint_names_net=joint_names_3d,
     #     )
 
     #     return 0, ""

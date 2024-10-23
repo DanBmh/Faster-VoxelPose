@@ -87,6 +87,9 @@ eval_joints = [
     "ankle_right",
 ]
 
+debug_output_dir = ""
+# debug_output_dir = "/Faster-VoxelPose/output/testoutputs/"
+
 # ==================================================================================================
 
 
@@ -335,8 +338,7 @@ class Skelda(JointsDataset):
             all_ids,
             joint_names_net=joint_names_3d,
             joint_names_use=eval_joints,
-            save_error_imgs="",
-            pred_imgpaths=[],
+            save_error_imgs=debug_output_dir,
         )
         _ = evals.pcp.run_eval(
             self.labels,
