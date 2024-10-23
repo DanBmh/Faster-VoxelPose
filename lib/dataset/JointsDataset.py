@@ -119,6 +119,8 @@ class JointsDataset(Dataset):
             }
             if 'all_image_path' in db_rec.keys():
                 meta['all_image_path'] = db_rec['all_image_path']
+            if 'cameras' in db_rec.keys():
+                meta['cameras'] = db_rec['cameras']
             
             self.db[idx] = {
                 'target': target,
@@ -143,11 +145,21 @@ class JointsDataset(Dataset):
         if 'all_image_path' in db_rec['meta'].keys():
             all_image_path = db_rec['meta']['all_image_path']
             all_input = []
-            for image_path in all_image_path:
+            for i, image_path in enumerate(all_image_path):
                 input = cv2.imread(image_path, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
                 if input.shape == (1002, 1000, 3):
                     # Fix the different shapes of human36m images
                     input = cv2.resize(input, (1000, 1000))
+                if db_rec['meta']['cameras'][i].get("type", "") == "fisheye":
+                    # Undistort fisheye images beforehand, because the voxelnet can't do this
+                    cam = db_rec['meta']['cameras'][i]
+                    K = np.array(cam["Kold"], dtype=np.float32).reshape((3, 3))
+                    DC = np.array(cam["DCold"], dtype=np.float32).reshape((4, 1))
+                    size = (cam["width"], cam["height"])
+                    Knew = np.array(cam["Knew"], dtype=np.float32).reshape((3, 3))
+                    input = cv2.fisheye.undistortImage(
+                        input, K, DC, Knew=Knew, new_size=size
+                    )
                 if self.color_rgb:
                     input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
                 input, _, _ = resize_image(input, self.image_size)

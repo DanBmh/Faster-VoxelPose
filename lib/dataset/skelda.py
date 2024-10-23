@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import json
 import logging
 
+import cv2
 import numpy as np
 import tqdm
 from dataset.JointsDataset import JointsDataset
@@ -20,6 +21,7 @@ dataset_use = "human36m"
 # dataset_use = "campus"
 # dataset_use = "ikeaasm"
 # dataset_use = "tsinghua"
+# dataset_use = "egohumans"
 datasets = {
     "panoptic": {
         "path": "/datasets/panoptic/skelda/test.json",
@@ -50,6 +52,17 @@ datasets = {
     "tsinghua": {
         "path": "/datasets/tsinghua/skelda/test.json",
         "take_interval": 3,
+    },
+    "egohumans": {
+        "path": "/datasets/egohumans/skelda/all.json",
+        "take_interval": 2,
+        # "subset": "tagging",
+        "subset": "legoassemble",
+        # "subset": "fencing",
+        # "subset": "basketball",
+        # "subset": "volleyball",
+        # "subset": "badminton",
+        # "subset": "tennis",
     },
 }
 
@@ -200,6 +213,27 @@ def load_labels(dataset: dict):
             label["scene"] = label["seq"]
             label["bodyids"] = list(range(len(label["bodies3D"])))
 
+    elif "egohumans" in dataset:
+        labels = load_json(dataset["egohumans"]["path"])
+        labels = [lb for lb in labels if "test" in lb["splits"]]
+        labels = [lb for lb in labels if dataset["egohumans"]["subset"] in lb["seq"]]
+        if dataset["egohumans"]["subset"] in ["volleyball", "tennis"]:
+            labels = [lb for i, lb in enumerate(labels) if i % 150 < 60]
+
+        for label in labels:
+            label["scene"] = label["seq"]
+
+            # Lift poses and cams up, that the bottom of the room is at zero level
+            # Else the dataset pipeline fails
+            zlift = label["room_size"][2] / 2 - label["room_center"][2]
+            bodies3D = np.array(label["bodies3D"])
+            bodies3D += [0, 0, zlift, 0]
+            label["bodies3D"] = bodies3D.tolist()
+            for cam in label["cameras"]:
+                T = np.array(cam["T"])
+                T[2][0] += zlift
+                cam["T"] = T.tolist()
+
     else:
         raise ValueError("Dataset not available")
 
@@ -275,6 +309,7 @@ class Skelda(JointsDataset):
                 "idx": label["id"],
                 "joints_3d": all_poses_3d,
                 "joints_3d_vis": all_poses_vis_3d,
+                "cameras": label["cameras"],
             }
             db.append(item)
 
@@ -292,6 +327,19 @@ class Skelda(JointsDataset):
                 cameras[label["scene"]] = [{} for _ in range(self.has_views)]
 
             for i, cam in enumerate(label["cameras"]):
+                if cam.get("type", "") == "fisheye":
+                    K = np.array(cam["K"], dtype=np.float32).reshape((3, 3))
+                    DC = np.array(cam["DC"], dtype=np.float32).reshape((4, 1))
+                    size = (cam["width"], cam["height"])
+                    Knew = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+                        K, DC, size, np.eye(3), balance=1.0, new_size=size
+                    )
+                    cam["Kold"] = K.tolist()
+                    cam["Knew"] = Knew.tolist()
+                    cam["K"] = Knew.tolist()
+                    cam["DCold"] = DC.tolist()
+                    cam["DC"] = [0.0, 0.0, 0.0, 0.0, 0.0]
+
                 our_cam = {}
                 our_cam["R"] = np.array(cam["R"])
                 our_cam["T"] = np.array(cam["T"]) * 1000
@@ -301,8 +349,16 @@ class Skelda(JointsDataset):
                 our_cam["cy"] = np.array(cam["K"])[1, 2]
                 our_cam["k"] = np.array(cam["DC"])[[0, 1, 4]].reshape(3, 1)
                 our_cam["p"] = np.array(cam["DC"])[[2, 3]].reshape(2, 1)
-                cameras[label["scene"]][i] = our_cam
 
+                if cam.get("type", "") == "fisheye":
+                    our_cam["type"] = "fisheye"
+                    our_cam["Kold"] = cam["Kold"]
+                    our_cam["Knew"] = cam["Knew"]
+                    our_cam["DCold"] = cam["DCold"]
+                    our_cam["width"] = cam["width"]
+                    our_cam["height"] = cam["height"]
+
+                cameras[label["scene"]][i] = our_cam
         return cameras
 
     def __getitem__(self, idx):
