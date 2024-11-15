@@ -20,6 +20,7 @@ dataset_use = "human36m"
 # dataset_use = "shelf"
 # dataset_use = "campus"
 # dataset_use = "ikeaasm"
+# dataset_use = "chi3d"
 # dataset_use = "tsinghua"
 # dataset_use = "egohumans"
 datasets = {
@@ -48,6 +49,10 @@ datasets = {
     "ikeaasm": {
         "path": "/datasets/ikeaasm/skelda/test.json",
         "take_interval": 2,
+    },
+    "chi3d": {
+        "path": "/datasets/chi3d/skelda/all.json",
+        "take_interval": 5,
     },
     "tsinghua": {
         "path": "/datasets/tsinghua/skelda/test.json",
@@ -201,6 +206,16 @@ def load_labels(dataset: dict):
             label["scene"] = "main"
 
             # Use "head" label for "nose" detections
+            label["joints"][label["joints"].index("head")] = "nose"
+
+    elif "chi3d" in dataset:
+        labels = load_json(dataset["chi3d"]["path"])
+        labels = [lb for lb in labels if lb["setup"] == "s03"]
+        labels = [lb for i, lb in enumerate(labels) if i % 2000 < 150]
+
+        # Use "head" label for "nose" detections
+        for label in labels:
+            label["scene"] = label["setup"]
             label["joints"][label["joints"].index("head")] = "nose"
 
     elif "tsinghua" in dataset:
