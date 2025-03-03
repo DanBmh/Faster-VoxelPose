@@ -112,6 +112,7 @@ def main():
                 test_vis_all(config, meta, cameras, resize_transform, inputs, input_heatmaps, fused_poses, plane_poses, proposal_centers, prefix)
         
         all_fused_poses = torch.cat(all_fused_poses, dim=0)
+    print("3D time:", model.time_3d)
 
     if test_dataset.has_evaluate_function:
         metric, msg = test_loader.dataset.evaluate(all_fused_poses)

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,6 +25,7 @@ class FasterVoxelPoseNet(nn.Module):
        
         self.pose_net = HumanDetectionNet(cfg)
         self.joint_net = JointLocalizationNet(cfg)
+        self.time_3d = 0
 
         self.lambda_loss_2d = cfg.TRAIN.LAMBDA_LOSS_2D
         self.lambda_loss_1d = cfg.TRAIN.LAMBDA_LOSS_1D
@@ -40,6 +42,7 @@ class FasterVoxelPoseNet(nn.Module):
         batch_size = input_heatmaps.shape[0]
  
         # human detection network
+        stime = time.time()
         proposal_heatmaps_2d, proposal_heatmaps_1d, proposal_centers, \
                               bbox_preds = self.pose_net(input_heatmaps, meta, cameras, resize_transform)
         mask = (proposal_centers[:, :, 3] >= 0)
@@ -101,6 +104,7 @@ class FasterVoxelPoseNet(nn.Module):
 
         fused_poses = torch.cat([fused_poses, proposal_centers[:, :, 3:5].reshape(batch_size,\
                                  -1, 1, 2).repeat(1, 1, self.num_joints, 1)], dim=3)
+        self.time_3d += time.time() - stime
 
         return fused_poses, plane_poses, proposal_centers, input_heatmaps, loss_dict
 
